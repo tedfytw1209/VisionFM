@@ -301,8 +301,9 @@ def eval_linear(args):
 
     output = np.vstack(output)
     target = np.vstack(target)
+    y_true = np.asarray(target).ravel()
 
-    auroc = roc_auc_score(target, output, average='macro', multi_class='ovr')
+    auroc = roc_auc_score(y_true, output, average='macro', multi_class='ovr')
     test_stats['auc'] = auroc
 
 
