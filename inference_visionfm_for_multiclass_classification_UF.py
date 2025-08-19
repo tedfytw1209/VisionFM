@@ -256,7 +256,7 @@ def eval_linear(args):
 
     print(f"-------- Current Task: {args.task} Modality: {args.modality} -------")
 
-    dataset_val = build_dataset(args=args, is_train='test')
+    dataset_val = build_dataset(args=args, is_train='test', img_dir=args.img_dir)
 
     # sampler = torch.utils.data.distributed.DistributedSampler(dataset_train)
     val_loader = torch.utils.data.DataLoader(
