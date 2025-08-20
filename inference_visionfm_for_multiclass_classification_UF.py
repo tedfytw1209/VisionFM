@@ -396,6 +396,7 @@ if __name__ == '__main__':
     parser.add_argument('--output_dir', default=".", help='Path to save logs and checkpoints')
     parser.add_argument('--num_labels', default=1000, type=int, help='Number of labels for linear classifier')
     parser.add_argument('--load_from', default=None, help='Path to load checkpoints to resume finetuning')
+    parser.add_argument('--img_dir', default='/orange/bianjiang/tienyu/OCT_AD/all_images/', type=str)
     args = parser.parse_args()
 
     if args.output_dir:
