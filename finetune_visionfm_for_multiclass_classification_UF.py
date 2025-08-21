@@ -333,9 +333,12 @@ def eval_linear(args):
             test_stats, output, target, output_labels = validate_network(val_loader, model, linear_classifier, args.n_last_blocks, args.avgpool_patchtokens)
 
             output = np.vstack(output)
-            output_one_hot = convert_to_one_hot(output_labels)
+            output_labels = np.concatenate(output_labels, axis=0)
             target = np.vstack(target)
+            print(f"Output shape: {output.shape}, Target shape: {target.shape}, Output labels shape: {len(output_labels)}")
+            output_one_hot = convert_to_one_hot(output_labels)
             target_one_hot = convert_to_one_hot(target)
+            print(f"Output one-hot shape: {output_one_hot.shape}, Target one-hot shape: {target_one_hot.shape}")
 
             auroc = roc_auc_score(target_one_hot, output, average='macro', multi_class='ovr')
             test_stats['auc'] = auroc
@@ -486,12 +489,12 @@ def validate_network(val_loader, model, linear_classifier, n, avgpool):
         if num_class > 1:  # multi-classes
             preds.append(output.softmax(dim=1).detach().cpu().numpy())
             output_label = output.argmax(dim=1)
-            output_labels.extend(output_label.detach().cpu().numpy())
+            output_labels.append(output_label.detach().cpu().numpy())
             targets.append(np.expand_dims(target.detach().cpu().numpy(), axis=1))
         else:  # binary classification
             preds.append(output.detach().cpu().sigmoid().numpy())
             output_label = (output > 0.5).long().squeeze(dim=1)
-            output_labels.extend(output_label.detach().cpu().numpy())
+            output_labels.append(output_label.detach().cpu().numpy())
             targets.append(np.expand_dims(target.detach().cpu().numpy(), axis=1))
 
         metric_logger.update(loss=loss.item())
