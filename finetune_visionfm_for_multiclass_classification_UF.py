@@ -335,7 +335,7 @@ def eval_linear(args):
             output = np.vstack(output)
             output_labels = np.concatenate(output_labels, axis=0)
             target = np.vstack(target)
-            print(f"Output shape: {output.shape}, Target shape: {target.shape}, Output labels shape: {len(output_labels)}")
+            print(f"Output shape: {output.shape}, Target shape: {target.shape}, Output labels shape: {output_labels.shape}")
             print(f"Output labels: {output_labels[:5]}, Target: {target[:5]}")
             output_one_hot = convert_to_one_hot(output_labels)
             target_one_hot = convert_to_one_hot(target)
