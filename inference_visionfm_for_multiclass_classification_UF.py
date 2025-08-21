@@ -384,6 +384,9 @@ if __name__ == '__main__':
     parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
         distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
+    parser.add_argument("--world_size", default=-1, type=int)
+    parser.add_argument("--rank", default=-1, type=int)
+    parser.add_argument("--dist_backend", default="nccl", type=str)
     parser.add_argument('--data_path', default='/path/to/dataset/', type=str,
         help='Please specify path to the eye image data.')
     parser.add_argument('--seed', default=0, type=int)
