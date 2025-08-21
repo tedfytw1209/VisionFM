@@ -11,6 +11,7 @@ import models
 import numpy as np
 import pandas as pd
 from models.head import ClsHead
+import wandb
 
 from pathlib import Path
 from torch import nn
@@ -19,7 +20,11 @@ from torchvision import datasets, transforms
 from torch.utils.data import Dataset
 from PIL import Image
 
-from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import (
+    accuracy_score, roc_auc_score, f1_score, average_precision_score,
+    hamming_loss, jaccard_score, recall_score, precision_score, cohen_kappa_score,matthews_corrcoef,
+    multilabel_confusion_matrix,confusion_matrix
+)
 from collections import defaultdict
 
 
@@ -248,6 +253,12 @@ def convert_to_one_hot(gts):
 
 
 def eval_linear(args):
+    wandb.init(
+        project="VisionFM",
+        name=args.task,
+        config=args,
+        dir=os.path.join('wandb_log',args.task),
+    )
     utils.init_distributed_mode(args)
     cudnn.benchmark = True
 
@@ -296,24 +307,50 @@ def eval_linear(args):
 
     model.eval()
     linear_classifier.eval()
-    test_stats, output, target = validate_network(val_loader, model, linear_classifier, args.n_last_blocks,
+    test_stats, output, target, output_labels = validate_network(val_loader, model, linear_classifier, args.n_last_blocks,
                                                   args.avgpool_patchtokens)
 
     output = np.vstack(output)
+    output_one_hot = convert_to_one_hot(output_labels)
     target = np.vstack(target)
     target_one_hot = convert_to_one_hot(target)
 
     auroc = roc_auc_score(target_one_hot, output, average='macro', multi_class='ovr')
     test_stats['auc'] = auroc
-
-
     aupr = average_precision_score(target_one_hot, output, average='macro')
     test_stats['aupr'] = aupr
+    accuracy = accuracy_score(target, output)
+    hamming = hamming_loss(target_one_hot, output_one_hot)
+    jaccard = jaccard_score(target_one_hot, output_one_hot, average='macro')
+    average_precision = average_precision_score(target_one_hot, output_one_hot, average='macro')
+    kappa = cohen_kappa_score(target, output)
+    f1 = f1_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
+    roc_auc = roc_auc_score(target_one_hot, output_one_hot, multi_class='ovr', average='macro')
+    precision = precision_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
+    recall = recall_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
+    mcc = matthews_corrcoef(target, output)
+    add_dict ={
+        'mcc': mcc,
+        'accuracy': accuracy,
+        'hamming': hamming,
+        'jaccard': jaccard,
+        'average_precision': average_precision,
+        'kappa': kappa,
+        'f1': f1,
+        'roc_auc': roc_auc,
+        'precision': precision,
+        'recall': recall
+    }
+    test_stats.update(add_dict)
 
     print(f"AUC: {auroc}, AUPR: {aupr}")
 
     np.save(os.path.join(args.output_dir, 'best.npy'), output)
     np.save(os.path.join(args.output_dir, 'target.npy'), target)
+        
+    wandb_dict={f'test_{k}': v for k, v in test_stats.items()}
+    wandb.log(wandb_dict)
+    wandb.finish()
 
 
 
@@ -324,6 +361,7 @@ def validate_network(val_loader, model, linear_classifier, n, avgpool):
     metric_logger = utils.MetricLogger(delimiter="  ")
     header = 'Test:'
     targets, preds = [], []
+    output_labels = []
     for inp, target in metric_logger.log_every(val_loader, 20, header):
         # move to gpu
         inp = inp.cuda(non_blocking=True)
@@ -354,16 +392,20 @@ def validate_network(val_loader, model, linear_classifier, n, avgpool):
         # save results
         if num_class > 1:  # multi-classes
             preds.append(output.softmax(dim=1).detach().cpu().numpy())
+            output_label = output.argmax(dim=1)
+            output_labels.extend(output_label.detach().cpu().numpy())
             targets.append(np.expand_dims(target.detach().cpu().numpy(), axis=1))
         else:  # binary classification
             preds.append(output.detach().cpu().sigmoid().numpy())
+            output_label = (output > 0.5).long().squeeze(dim=1)
+            output_labels.extend(output_label.detach().cpu().numpy())
             targets.append(np.expand_dims(target.detach().cpu().numpy(), axis=1))
 
         metric_logger.update(loss=loss.item())
 
     print('* test loss {losses.global_avg:.4f} '.format(losses=metric_logger.loss))
 
-    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}, preds, targets
+    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}, preds, targets, output_labels
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('Evaluating VisionFM for multi-class classification using a test set')
     parser.add_argument('--n_last_blocks', default=4, type=int)
