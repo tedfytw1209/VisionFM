@@ -244,8 +244,8 @@ def build_transform(is_train, args):
     ])
     return transform
 
-def convert_to_one_hot(gts):
-    gts_one_hot = np.zeros((gts.shape[0], len(np.unique(gts))))
+def convert_to_one_hot(gts,num_classes):
+    gts_one_hot = np.zeros((gts.shape[0], num_classes))
     for i in range(len(gts)):
         gts_one_hot[i][gts[i][0]] = 1
 
@@ -313,8 +313,8 @@ def eval_linear(args):
     output = np.vstack(output)
     output_labels = np.concatenate(output_labels, axis=0)
     target = np.vstack(target)
-    output_one_hot = convert_to_one_hot(output_labels)
-    target_one_hot = convert_to_one_hot(target)
+    output_one_hot = convert_to_one_hot(output_labels, num_classes=args.num_labels)
+    target_one_hot = convert_to_one_hot(target, num_classes=args.num_labels)
     target_1d = target.flatten()
     output_labels_1d = output_labels.flatten()
 
