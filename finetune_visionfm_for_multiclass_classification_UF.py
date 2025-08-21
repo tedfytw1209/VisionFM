@@ -335,26 +335,23 @@ def eval_linear(args):
             output = np.vstack(output)
             output_labels = np.concatenate(output_labels, axis=0)
             target = np.vstack(target)
-            print(f"Output shape: {output.shape}, Target shape: {target.shape}, Output labels shape: {output_labels.shape}")
-            print(f"Output labels: {output_labels[:5]}, Target: {target[:5]}")
             output_one_hot = convert_to_one_hot(output_labels)
             target_one_hot = convert_to_one_hot(target)
-            print(f"Output one-hot shape: {output_one_hot.shape}, Target one-hot shape: {target_one_hot.shape}")
 
             auroc = roc_auc_score(target_one_hot, output, average='macro', multi_class='ovr')
             test_stats['auc'] = auroc
             aupr = average_precision_score(target_one_hot, output, average='macro')
             test_stats['aupr'] = aupr
-            accuracy = accuracy_score(target, output)
+            accuracy = accuracy_score(target, output_labels)
             hamming = hamming_loss(target_one_hot, output_one_hot)
             jaccard = jaccard_score(target_one_hot, output_one_hot, average='macro')
             average_precision = average_precision_score(target_one_hot, output_one_hot, average='macro')
-            kappa = cohen_kappa_score(target, output)
+            kappa = cohen_kappa_score(target, output_labels)
             f1 = f1_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
             roc_auc = roc_auc_score(target_one_hot, output_one_hot, multi_class='ovr', average='macro')
             precision = precision_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
             recall = recall_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
-            mcc = matthews_corrcoef(target, output)
+            mcc = matthews_corrcoef(target, output_labels)
             add_dict ={
                 'mcc': mcc,
                 'accuracy': accuracy,
