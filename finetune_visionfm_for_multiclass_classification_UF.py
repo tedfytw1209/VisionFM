@@ -337,21 +337,23 @@ def eval_linear(args):
             target = np.vstack(target)
             output_one_hot = convert_to_one_hot(output_labels)
             target_one_hot = convert_to_one_hot(target)
+            target_1d = target.flatten()
+            output_labels_1d = output_labels.flatten()
 
             auroc = roc_auc_score(target_one_hot, output, average='macro', multi_class='ovr')
             test_stats['auc'] = auroc
             aupr = average_precision_score(target_one_hot, output, average='macro')
             test_stats['aupr'] = aupr
-            accuracy = accuracy_score(target, output_labels)
+            accuracy = accuracy_score(target_1d, output_labels_1d)
             hamming = hamming_loss(target_one_hot, output_one_hot)
             jaccard = jaccard_score(target_one_hot, output_one_hot, average='macro')
             average_precision = average_precision_score(target_one_hot, output_one_hot, average='macro')
-            kappa = cohen_kappa_score(target, output_labels)
+            kappa = cohen_kappa_score(target_1d, output_labels_1d)
             f1 = f1_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
             roc_auc = roc_auc_score(target_one_hot, output_one_hot, multi_class='ovr', average='macro')
             precision = precision_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
             recall = recall_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
-            mcc = matthews_corrcoef(target, output_labels)
+            mcc = matthews_corrcoef(target_1d, output_labels_1d)
             add_dict ={
                 'mcc': mcc,
                 'accuracy': accuracy,
