@@ -327,6 +327,7 @@ def eval_linear(args):
 
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                      'epoch': epoch}
+        wandb.log(log_stats, step=epoch)
         if epoch % args.val_freq == 0 or epoch == args.epochs - 1:
             model.eval()
             linear_classifier.eval()
@@ -370,13 +371,12 @@ def eval_linear(args):
 
             log_stats = {**{k: v for k, v in log_stats.items()},
                          **{f'val_{k}': v for k, v in test_stats.items()}}
+            wandb.log(log_stats, step=epoch)
         
             if utils.is_main_process() and (test_stats["auc"] >= best_auc):
                 # always only save best checkpoint till now
                 with (Path(args.output_dir) / "log.txt").open("a") as f:
                     f.write(json.dumps(log_stats) + "\n")
-                log_stats["epoch"] = epoch
-                wandb.log(log_stats, step=epoch)
                 save_dict = {
                     "epoch": epoch + 1,
                     "classifier_state_dict": linear_classifier.state_dict(),
