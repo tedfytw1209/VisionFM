@@ -328,7 +328,7 @@ def eval_linear(args):
     average_precision = average_precision_score(target_one_hot, output_one_hot, average='macro')
     kappa = cohen_kappa_score(target_1d, output_labels_1d)
     f1 = f1_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
-    roc_auc = roc_auc_score(target_one_hot, output_one_hot, multi_class='ovr', average='macro')
+    roc_auc = roc_auc_score(target_one_hot, output, multi_class='ovr', average='macro') #output 
     precision = precision_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
     recall = recall_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
     mcc = matthews_corrcoef(target_1d, output_labels_1d)
