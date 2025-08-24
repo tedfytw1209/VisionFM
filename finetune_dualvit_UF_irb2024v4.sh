@@ -23,7 +23,7 @@ LR=${2:-"1e-3"}
 Num_CLASS=${3:-"2"}
 weight_decay="0.05"
 Eval_score="auc"
-Modality="Dual"
+Modality=${4:-"Dual"}
 
 NUM_K=0
 data_type="IRB2024_v4"
