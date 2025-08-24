@@ -38,5 +38,5 @@ echo $SUBSTUDY
 echo $Num_CLASS
 
 # Modify the path to your singularity container 
-#sbatch finetune_dualvit_UF_irb2024v4.sh AMD_all_split 1e-3 2 OCT
+#sbatch finetune_dualvit_UF_irb2024v4.sh AMD_all_split 1e-3 2 Dual
 python inference_dualvisionfm_for_multiclass_classification_UF.py --oct_pretrained_weights ./results/$STUDY-${data_type}-all-$FINETUNED_MODEL-OCT-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval/checkpoint_best_finetune.pth --fundus_pretrained_weights ./results/$STUDY-${data_type}-all-$FINETUNED_MODEL-Fundus-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval/checkpoint_best_finetune.pth --arch $MODEL --avgpool_patchtokens 0 --input_size 224 --output_dir ./results/$STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval_test --data_path /orange/ruogu.fang/tienyuchang/OCTRFF_Data/data/UF-cohort/${data_type}/split/tune5-eval5/${STUDY}.csv --task $STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval_test --modality $Modality --num_workers 8 --batch_size_per_gpu $BATCH_SIZE --num_labels $Num_CLASS --extra 10 --img_dir $IMG_Path
