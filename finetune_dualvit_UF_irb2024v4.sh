@@ -18,7 +18,7 @@ conda activate /blue/guoj1/tienyuchang/.conda/envs/vfm
 #cd $HOME
 STUDY=$1 #AMD_all_split 2, Cataract_all_split 2, DR_all_split 6, Glaucoma_all_split 6, DR_binary_all_split 2, Glaucoma_binary_all_split 2
 MODEL="vit_base"
-FINETUNED_MODEL="VisionFM"
+FINETUNED_MODEL="VisionFM_OCT"
 LR=${2:-"1e-3"}
 Num_CLASS=${3:-"2"}
 weight_decay="0.05"
