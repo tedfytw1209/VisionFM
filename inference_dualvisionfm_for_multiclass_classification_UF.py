@@ -210,8 +210,8 @@ class RETFoundDataset(Dataset):
 #build dataset for select
 def build_dataset(is_train, args, k=0, img_dir = '/orange/bianjiang/tienyu/OCT_AD/all_images/', modality='OCT',transform=None, patient_ids=None, pid_key='patient_id'):
     if transform is None:
-        transform = build_transform(is_train, args)
-    
+        transform = build_transform(is_train, args, modality)
+
     if args.data_path.endswith('.csv'):
         dataset = CSV_Dataset(args.data_path, img_dir, is_train, transform, k, modality=modality, patient_ids=patient_ids, pid_key=pid_key)
     else:
@@ -219,9 +219,9 @@ def build_dataset(is_train, args, k=0, img_dir = '/orange/bianjiang/tienyu/OCT_A
 
     return dataset
 
-def build_transform(is_train, args):
-    mean, std = utils.get_stats(args.modality)
-    print(f"use the {args.modality} mean and std: {mean} and {std}")
+def build_transform(is_train, args, modality):
+    mean, std = utils.get_stats(modality)
+    print(f"use the {modality} mean and std: {mean} and {std}")
     if not isinstance(is_train, list):
         is_train = [is_train]
     # train transform
