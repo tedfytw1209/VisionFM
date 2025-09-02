@@ -259,7 +259,9 @@ def eval_linear(args):
         config=args,
         dir=os.path.join('wandb_log',args.task),
     )
-    utils.init_distributed_mode(args)
+    #utils.init_distributed_mode(args)
+    args.world_size = 1
+    args.rank = 0
     cudnn.benchmark = True
 
     # fix the seed for reproducibility
