@@ -11,7 +11,7 @@ Modality=${4:-"OCT"} # CFP, OCT, OCT_CFP
 
 NUM_K=0
 
-#bash baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v4.sh 1e-3 2 OCT
+#bash baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 OCT
 DATASETS=(AMD_all_split Cataract_all_split DR_all_split Glaucoma_all_split DR_binary_all_split Glaucoma_binary_all_split)  # List of datasets
 CLASSES=(2 2 6 6 2 2)  # Number of classes for each dataset
 for i in "${!DATASETS[@]}"
