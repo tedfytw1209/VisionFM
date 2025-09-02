@@ -34,7 +34,7 @@ Install the dependencies:
 ```shell
 git clone https://github.com/ABILab-CUHK/VisionFM.git
 cd VisionFM
-pip install -r requirments.txt
+pip install -r requirements.txt
 ```
 ## 1. Finetuning
 If you want to utlize our weights to fine-tune on your data, please refer to this [instruction](./Fine-tuning/README.md).
