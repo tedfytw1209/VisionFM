@@ -260,9 +260,7 @@ def eval_linear(args):
         config=args,
         dir=os.path.join('wandb_log',args.task),
     )
-    #utils.init_distributed_mode(args)
-    args.world_size = 1
-    args.rank = 0
+    utils.init_distributed_mode(args)
     cudnn.benchmark = True
     
     # fix the seed for reproducibility 
@@ -273,8 +271,7 @@ def eval_linear(args):
     dataset_train = build_dataset(args=args, is_train='train',img_dir=args.img_dir)
     dataset_val = build_dataset(args=args, is_train='val', img_dir=args.img_dir)
 
-    #sampler = torch.utils.data.distributed.DistributedSampler(dataset_train)
-    sampler = None
+    sampler = torch.utils.data.distributed.DistributedSampler(dataset_train)
     train_loader = torch.utils.data.DataLoader(
         dataset_train,
         sampler=sampler,
