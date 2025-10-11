@@ -24,6 +24,7 @@ Num_CLASS=${3:-"2"}
 weight_decay="0.05"
 Eval_score="auc"
 Modality=${4:-"OCT"} # CFP, OCT, OCT_CFP
+SUBSETNUM=${5:-0} # 0, 500, 1000
 
 NUM_K=0
 data_type="IRB2024_v5"
@@ -39,8 +40,8 @@ echo $Num_CLASS
 
 # Modify the path to your singularity container 
 #sbatch finetune_retfound_UFbenchmark_irb2024v5.sh AMD_all_split 1e-3 2 OCT
-python finetune_visionfm_for_multiclass_classification_UF.py --pretrained_weights /orange/ruogu.fang/tienyuchang/VisionFM_pretrain/VFM_${Modality}_weights.pth --arch $MODEL --avgpool_patchtokens 0 --input_size 224 --lr $LR --epochs $Epochs --output_dir ./results/$STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval --data_path /orange/ruogu.fang/tienyuchang/OCTRFF_Data/data/UF-cohort/${data_type}/split/tune5-eval5/${STUDY}.csv --task $STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval --modality $Modality --num_workers 8 --batch_size_per_gpu $BATCH_SIZE --num_labels $Num_CLASS --extra 10 --img_dir $IMG_Path
+python finetune_visionfm_for_multiclass_classification_UF.py --pretrained_weights /orange/ruogu.fang/tienyuchang/VisionFM_pretrain/VFM_${Modality}_weights.pth --arch $MODEL --avgpool_patchtokens 0 --input_size 224 --lr $LR --epochs $Epochs --output_dir ./results/$STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval --data_path /orange/ruogu.fang/tienyuchang/OCTRFF_Data/data/UF-cohort/${data_type}/split/tune5-eval5/${STUDY}.csv --task $STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval --modality $Modality --num_workers 8 --batch_size_per_gpu $BATCH_SIZE --num_labels $Num_CLASS --extra 10 --img_dir $IMG_Path --new_subset_num $SUBSETNUM
 
 echo "Test"
 
-python inference_visionfm_for_multiclass_classification_UF.py --pretrained_weights ./results/$STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval/checkpoint_best_finetune.pth --arch $MODEL --avgpool_patchtokens 0 --input_size 224 --lr $LR --epochs $Epochs --output_dir ./results/$STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval_test --data_path /orange/ruogu.fang/tienyuchang/OCTRFF_Data/data/UF-cohort/${data_type}/split/tune5-eval5/${STUDY}.csv --task $STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval_test --modality $Modality --num_workers 8 --batch_size_per_gpu $BATCH_SIZE --num_labels $Num_CLASS --extra 10 --img_dir $IMG_Path
+python inference_visionfm_for_multiclass_classification_UF.py --pretrained_weights ./results/$STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval/checkpoint_best_finetune.pth --arch $MODEL --avgpool_patchtokens 0 --input_size 224 --lr $LR --epochs $Epochs --output_dir ./results/$STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval_test --data_path /orange/ruogu.fang/tienyuchang/OCTRFF_Data/data/UF-cohort/${data_type}/split/tune5-eval5/${STUDY}.csv --task $STUDY-${data_type}-all-$FINETUNED_MODEL-${Modality}-bs${BATCH_SIZE}ep${Epochs}lr${LR}opt${OPTIMIZER}-${Eval_score}eval_test --modality $Modality --num_workers 8 --batch_size_per_gpu $BATCH_SIZE --num_labels $Num_CLASS --extra 10 --img_dir $IMG_Path --new_subset_num $SUBSETNUM

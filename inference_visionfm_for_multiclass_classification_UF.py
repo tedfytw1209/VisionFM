@@ -444,6 +444,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_labels', default=1000, type=int, help='Number of labels for linear classifier')
     parser.add_argument('--load_from', default=None, help='Path to load checkpoints to resume finetuning')
     parser.add_argument('--img_dir', default='/orange/bianjiang/tienyu/OCT_AD/all_images/', type=str)
+    parser.add_argument('--new_subset_num', default=0, type=int,
+                        help='Subset number for sampling dataset. If > 0, sample subset_num from train datasets with seed 42')
     args = parser.parse_args()
 
     if args.output_dir:

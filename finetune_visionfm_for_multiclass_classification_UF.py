@@ -15,6 +15,7 @@ import wandb
 
 from pathlib import Path
 from torch import nn
+from torch.utils.data import Subset
 from torchvision import transforms as pth_transforms
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset
@@ -52,12 +53,12 @@ class CSV_Dataset(Dataset):
             is_train_l = is_train
         is_train = is_train_l[0]
         if patient_ids is not None:
-            self.annotations = data[data[pid_key].isin(patient_ids)]
+            self.annotations = data[data[pid_key].isin(patient_ids)].reset_index(drop=True)
             self.annotations['split'] = is_train
         elif 'split' in data.columns:
-            self.annotations = data[data['split'].isin(is_train_l)]
+            self.annotations = data[data['split'].isin(is_train_l)].reset_index(drop=True)
         else:
-            self.annotations = data
+            self.annotations = data.reset_index(drop=True)
         print('Split: ', is_train_l,' Data len: ', self.annotations.shape[0])
         self.classes = [str(c) for c in self.annotations['label'].unique()]
         self.num_class = len(self.classes)
@@ -286,6 +287,86 @@ def eval_linear(args):
         pin_memory=True,
         shuffle=True
     )
+    # Apply subset sampling by absolute number if new_subset_num > 0
+    if args.new_subset_num > 0:
+        print(f'New subset method for absolute number {args.new_subset_num}')
+        def create_separate_class_based_subsets(train_dataset, val_dataset, total_subset_num):
+            """Create separate subsets from train and validation datasets based on class ratios"""
+            
+            def create_class_balanced_subset(dataset, split_name, target_size):
+                """Create a class-balanced subset from a single dataset"""
+                targets = np.array(dataset.targets)
+                unique_classes, class_counts = np.unique(targets, return_counts=True)
+                n_classes = len(unique_classes)
+                
+                # Calculate class ratios within this dataset
+                class_ratios = class_counts / len(targets)
+                
+                print(f'\n{split_name} dataset - Original size: {len(dataset)}, Classes: {n_classes}')
+                print(f'{split_name} class counts: {dict(zip(unique_classes, class_counts))}')
+                print(f'{split_name} class ratios: {dict(zip(unique_classes, class_ratios))}')
+                print(f'{split_name} target subset size: {target_size}')
+                
+                # Separate samples by class and permute
+                rng = np.random.RandomState(42)
+                selected_indices = []
+                
+                for class_idx in unique_classes:
+                    # Get all samples for this class
+                    class_mask = targets == class_idx
+                    class_samples = np.where(class_mask)[0]
+                    
+                    # Permute samples within this class
+                    class_samples_copy = class_samples.copy()
+                    rng.shuffle(class_samples_copy)
+                    
+                    # Calculate how many samples to select for this class
+                    class_target_samples = int((target_size-n_classes) * class_ratios[class_idx]) + 1
+                    
+                    # Ensure we don't exceed available samples
+                    available_samples = len(class_samples_copy)
+                    if class_target_samples > available_samples:
+                        print(f'Warning: {split_name} Class {class_idx} needs {class_target_samples} samples but only {available_samples} available')
+                        class_target_samples = available_samples
+                    
+                    # Select samples for this class
+                    selected_class_samples = class_samples_copy[:class_target_samples]
+                    selected_indices.extend(selected_class_samples)
+                    
+                    print(f'{split_name} Class {class_idx}: ratio={class_ratios[class_idx]:.3f}, target={class_target_samples}, selected={len(selected_class_samples)}')
+                
+                print('Selected indices:', selected_indices)
+                subset_dataset = Subset(dataset, selected_indices)
+                
+                # Add targets attribute to subset for compatibility
+                subset_dataset.targets = [dataset.targets[i] for i in selected_indices]
+                subset_dataset.annotations = dataset.annotations.iloc[selected_indices].reset_index(drop=True)
+                subset_dataset.classes = dataset.classes
+                subset_dataset.class_to_idx = dataset.class_to_idx
+                
+                print(f'{split_name} final subset size: {len(subset_dataset)}')
+                return subset_dataset
+            
+            # Calculate target sizes for train and validation (80/20 split)
+            train_target_size = int(total_subset_num * 0.8)
+            val_target_size = int(total_subset_num * 0.2)
+            
+            print(f'Total target subset size: {total_subset_num}')
+            print(f'Train target size: {train_target_size} (80%)')
+            print(f'Validation target size: {val_target_size} (20%)')
+            
+            # Create subsets separately
+            train_subset = create_class_balanced_subset(train_dataset, 'Train', train_target_size)
+            val_subset = create_class_balanced_subset(val_dataset, 'Validation', val_target_size)
+            
+            return train_subset, val_subset
+
+        dataset_train, dataset_val = create_separate_class_based_subsets(dataset_train, dataset_val, int(args.new_subset_num))
+    #print final label distribution
+    print('Final label distribution:')
+    print('Train:', pd.Series(dataset_train.targets).value_counts())
+    print('Validation:', pd.Series(dataset_val.targets).value_counts())
+    
     print(f"Data loaded with {len(dataset_train)} train and {len(dataset_val)} val imgs.")
 
     # ============ building network ... ============
@@ -540,6 +621,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_labels', default=1000, type=int, help='Number of labels for linear classifier')
     parser.add_argument('--load_from', default=None, help='Path to load checkpoints to resume finetuning')
     parser.add_argument('--img_dir', default='/orange/bianjiang/tienyu/OCT_AD/all_images/', type=str)
+    parser.add_argument('--new_subset_num', default=0, type=int,
+                        help='Subset number for sampling dataset. If > 0, sample subset_num from train datasets with seed 42')
     args = parser.parse_args()
 
     if args.output_dir:

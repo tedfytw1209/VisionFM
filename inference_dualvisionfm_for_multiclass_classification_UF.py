@@ -52,12 +52,12 @@ class CSV_Dataset(Dataset):
             is_train_l = is_train
         is_train = is_train_l[0]
         if patient_ids is not None:
-            self.annotations = data[data[pid_key].isin(patient_ids)]
+            self.annotations = data[data[pid_key].isin(patient_ids)].reset_index(drop=True)
             self.annotations['split'] = is_train
         elif 'split' in data.columns:
-            self.annotations = data[data['split'].isin(is_train_l)]
+            self.annotations = data[data['split'].isin(is_train_l)].reset_index(drop=True)
         else:
-            self.annotations = data
+            self.annotations = data.reset_index(drop=True)
         print('Split: ', is_train_l,' Data len: ', self.annotations.shape[0])
         self.classes = [str(c) for c in self.annotations['label'].unique()]
         self.num_class = len(self.classes)
@@ -513,6 +513,8 @@ if __name__ == '__main__':
     parser.add_argument('--num_labels', default=1000, type=int, help='Number of labels for linear classifier')
     parser.add_argument('--load_from', default=None, help='Path to load checkpoints to resume finetuning')
     parser.add_argument('--img_dir', default='/orange/bianjiang/tienyu/OCT_AD/all_images/', type=str)
+    parser.add_argument('--new_subset_num', default=0, type=int,
+                        help='Subset number for sampling dataset. If > 0, sample subset_num from train datasets with seed 42')
     args = parser.parse_args()
 
     if args.output_dir:
