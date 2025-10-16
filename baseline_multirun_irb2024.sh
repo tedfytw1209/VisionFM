@@ -1,4 +1,19 @@
-#! /bin/bash
+#!/bin/bash
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem-per-cpu=4gb
+#SBATCH --partition=hpg-turin
+#SBATCH --gpus=1
+#SBATCH --time=48:00:00
+#SBATCH --output=%x.%j.out
+#SBATCH --account=ruogu.fang
+#SBATCH --qos=ruogu.fang
+
+date;hostname;pwd
+
+module load conda
+conda activate vfm
 
 SCRIPT=$1 #AMD_all_split 2, Cataract_all_split 2, DR_all_split 6, Glaucoma_all_split 6, DR_binary_all_split 2, Glaucoma_binary_all_split 2
 MODEL="vit_base"
@@ -12,8 +27,8 @@ SUBSETNUM=${5:-0} # 0, 500, 1000
 
 NUM_K=0
 
-#bash baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 OCT
-#bash baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 Fundus
+#sbatch baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 OCT
+#sbatch baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 Fundus
 DATASETS=(AMD_all_split Cataract_all_split DR_all_split Glaucoma_all_split DR_binary_all_split Glaucoma_binary_all_split)  # List of datasets
 CLASSES=(2 2 6 6 2 2)  # Number of classes for each dataset
 for i in "${!DATASETS[@]}"
@@ -23,7 +38,7 @@ do
     NUM_CLASS="${CLASSES[$i]}"
     echo "Running dataset: $DATASET with num_class=$NUM_CLASS"
     # Submit the job to Slurm
-    echo "sbatch $SCRIPT $DATASET $LR $NUM_CLASS $Modality $SUBSETNUM"
-    sbatch $SCRIPT $DATASET $LR $NUM_CLASS $Modality $SUBSETNUM
+    echo "bash $SCRIPT $DATASET $LR $NUM_CLASS $Modality $SUBSETNUM"
+    bash $SCRIPT $DATASET $LR $NUM_CLASS $Modality $SUBSETNUM
     sleep 1 # Optional: sleep to avoid overwhelming the scheduler
 done

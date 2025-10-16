@@ -27,8 +27,8 @@ SUBSETNUM=${5:-0} # 0, 500, 1000
 
 NUM_K=0
 
-#bash baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 OCT
-#bash baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 Fundus
+#sbatch baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 OCT
+#sbatch baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 Fundus
 DATASETS=(PD_all_split DKD_all_split Diabetes_all_split) 
 CLASSES=(2 2 2)  # Number of classes for each dataset
 for i in "${!DATASETS[@]}"

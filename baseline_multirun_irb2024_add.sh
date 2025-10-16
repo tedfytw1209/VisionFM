@@ -27,8 +27,8 @@ SUBSETNUM=${5:-0} # 0, 500, 1000
 
 NUM_K=0
 
-#bash baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 OCT
-#bash baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 Fundus
+#sbatch baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 OCT
+#sbatch baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 Fundus
 DATASETS=(DME_all_split CSR_all_split Drusen_all_split ERM_all_split MH_all_split CRVO_CRAO_all_split PVD_all_split RNV_all_split DME_binary_all_split) 
 CLASSES=(5 2 2 2 2 2 2 2 2)  # Number of classes for each dataset
 for i in "${!DATASETS[@]}"
