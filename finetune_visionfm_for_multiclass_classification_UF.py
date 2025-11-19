@@ -272,21 +272,6 @@ def eval_linear(args):
     dataset_train = build_dataset(args=args, is_train='train',img_dir=args.img_dir)
     dataset_val = build_dataset(args=args, is_train='val', img_dir=args.img_dir)
 
-    sampler = torch.utils.data.distributed.DistributedSampler(dataset_train)
-    train_loader = torch.utils.data.DataLoader(
-        dataset_train,
-        sampler=sampler,
-        batch_size=args.batch_size_per_gpu,
-        num_workers=args.num_workers,
-        pin_memory=True,
-    )
-    val_loader = torch.utils.data.DataLoader(
-        dataset_val,
-        batch_size=args.batch_size_per_gpu,
-        num_workers=args.num_workers,
-        pin_memory=True,
-        shuffle=True
-    )
     # Apply subset sampling by absolute number if new_subset_num > 0
     if args.new_subset_num > 0:
         print(f'New subset method for absolute number {args.new_subset_num}')
@@ -362,6 +347,7 @@ def eval_linear(args):
             return train_subset, val_subset
 
         dataset_train, dataset_val = create_separate_class_based_subsets(dataset_train, dataset_val, int(args.new_subset_num))
+        args.droplast = False  # do not drop last for small subset training
     #print final label distribution
     print('Final label distribution:')
     print('Train:', pd.Series(dataset_train.targets).value_counts())
@@ -369,6 +355,24 @@ def eval_linear(args):
     
     print(f"Data loaded with {len(dataset_train)} train and {len(dataset_val)} val imgs.")
 
+    sampler = torch.utils.data.distributed.DistributedSampler(dataset_train)
+    train_loader = torch.utils.data.DataLoader(
+        dataset_train,
+        sampler=sampler,
+        batch_size=args.batch_size_per_gpu,
+        num_workers=args.num_workers,
+        pin_memory=True,
+        drop_last=args.droplast
+    )
+    val_loader = torch.utils.data.DataLoader(
+        dataset_val,
+        batch_size=args.batch_size_per_gpu,
+        num_workers=args.num_workers,
+        pin_memory=True,
+        shuffle=True,
+        drop_last=False
+    )
+    
     # ============ building network ... ============
     model = models.__dict__[args.arch](
         img_size = [args.input_size],
@@ -623,6 +627,8 @@ if __name__ == '__main__':
     parser.add_argument('--img_dir', default='/orange/bianjiang/tienyu/OCT_AD/all_images/', type=str)
     parser.add_argument('--new_subset_num', default=0, type=int,
                         help='Subset number for sampling dataset. If > 0, sample subset_num from train datasets with seed 42')
+    parser.add_argument('--droplast', action='store_true', default=False,
+                        help='Drop the last incomplete batch, if the dataset size is not divisible by the batch size')
     args = parser.parse_args()
 
     if args.output_dir:
