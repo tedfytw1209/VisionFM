@@ -405,7 +405,7 @@ def eval_linear(args):
     best_auc = to_restore["best_auc"]
     aupr_with_best_auc = 0
     for epoch in range(start_epoch, args.epochs):
-        train_loader.sampler.set_epoch(epoch)
+        #train_loader.sampler.set_epoch(epoch)
         model.train()
         linear_classifier.train()
         train_stats = train(model, linear_classifier, optimizer, train_loader, epoch, args.n_last_blocks, args.avgpool_patchtokens)
