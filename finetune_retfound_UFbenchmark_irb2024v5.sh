@@ -12,6 +12,7 @@
 
 date;hostname;pwd
 
+module purge
 module load conda
 conda activate vfm
 # Go to home directory
