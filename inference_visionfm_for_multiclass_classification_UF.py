@@ -293,7 +293,7 @@ def eval_linear(args):
 
     linear_classifier = ClsHead(embed_dim=embed_dim * 4, num_classes=args.num_labels, layers=3)
     linear_classifier = linear_classifier.cuda()
-    linear_classifier = nn.parallel.DistributedDataParallel(linear_classifier, device_ids=[args.gpu])
+    #linear_classifier = nn.parallel.DistributedDataParallel(linear_classifier, device_ids=[args.gpu])
 
     # load the weights
     state_dict = torch.load(args.pretrained_weights, map_location="cpu")
@@ -426,8 +426,6 @@ if __name__ == '__main__':
     parser.add_argument("--lr", default=0.001, type=float, help="""Learning rate at the beginning of
         training the classifier""")
     parser.add_argument('--batch_size_per_gpu', default=128, type=int, help='Per-GPU batch-size')
-    parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
-        distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
     parser.add_argument("--world_size", default=-1, type=int)
     parser.add_argument("--rank", default=-1, type=int)

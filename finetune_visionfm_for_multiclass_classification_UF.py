@@ -19,6 +19,7 @@ from torch.utils.data import Subset
 from torchvision import transforms as pth_transforms
 from torchvision import datasets, transforms
 from torch.utils.data import Dataset
+from torch.utils.data import RandomSampler, SequentialSampler, DistributedSampler
 from PIL import Image
 
 from sklearn.metrics import (
@@ -355,7 +356,7 @@ def eval_linear(args):
     
     print(f"Data loaded with {len(dataset_train)} train and {len(dataset_val)} val imgs.")
 
-    sampler = torch.utils.data.distributed.DistributedSampler(dataset_train)
+    sampler = RandomSampler(dataset_train)
     train_loader = torch.utils.data.DataLoader(
         dataset_train,
         sampler=sampler,
@@ -387,7 +388,7 @@ def eval_linear(args):
     
     linear_classifier = ClsHead(embed_dim=embed_dim*4, num_classes=args.num_labels, layers=3)        
     linear_classifier = linear_classifier.cuda()
-    linear_classifier = nn.parallel.DistributedDataParallel(linear_classifier, device_ids=[args.gpu])
+    #linear_classifier = nn.parallel.DistributedDataParallel(linear_classifier, device_ids=[args.gpu])
 
     optimizer = torch.optim.AdamW(
         [{'params': model.parameters(), 'lr': args.lr * 0.1 * (args.batch_size_per_gpu * utils.get_world_size()) / 256.}, {'params': linear_classifier.parameters()}],
@@ -607,8 +608,6 @@ if __name__ == '__main__':
     parser.add_argument("--lr", default=0.001, type=float, help="""Learning rate at the beginning of
         training the classifier""")
     parser.add_argument('--batch_size_per_gpu', default=128, type=int, help='Per-GPU batch-size')
-    parser.add_argument("--dist_url", default="env://", type=str, help="""url used to set up
-        distributed training; see https://pytorch.org/docs/stable/distributed.html""")
     parser.add_argument("--local_rank", default=0, type=int, help="Please ignore and do not set this argument.")
     parser.add_argument("--world_size", default=-1, type=int)
     parser.add_argument("--rank", default=-1, type=int)
