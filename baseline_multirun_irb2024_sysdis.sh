@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem-per-cpu=4gb
+#SBATCH --mem-per-cpu=8gb
 #SBATCH --partition=hpg-turin
 #SBATCH --gpus=1
 #SBATCH --time=48:00:00
@@ -26,6 +26,8 @@ Modality=${4:-"OCT"} # CFP, OCT, OCT_CFP
 SUBSETNUM=${5:-0} # 0, 500, 1000
 
 NUM_K=0
+
+echo $SLURM_JOBID
 
 #sbatch baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 OCT
 #sbatch baseline_multirun_irb2024.sh finetune_retfound_UFbenchmark_irb2024v5.sh 1e-3 2 Fundus

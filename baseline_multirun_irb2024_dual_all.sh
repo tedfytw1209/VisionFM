@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem-per-cpu=4gb
+#SBATCH --mem-per-cpu=8gb
 #SBATCH --partition=hpg-turin
 #SBATCH --gpus=1
 #SBATCH --time=48:00:00
@@ -26,6 +26,8 @@ Modality=${4:-"OCT"} # Fundus, OCT
 SUBSETNUM=${5:-0} # 0, 500, 1000    
 
 NUM_K=0
+
+echo $SLURM_JOBID
 
 #sbatch baseline_multirun_irb2024_dual_all.sh finetune_dualvit_UF_irb2024v5.sh 1e-3 2 Dual
 DATASETS=(AMD_all_split Cataract_all_split DR_all_split Glaucoma_all_split DR_binary_all_split Glaucoma_binary_all_split DME_all_split CSR_all_split Drusen_all_split ERM_all_split MH_all_split CRVO_CRAO_all_split PVD_all_split RNV_all_split DME_binary_all_split PD_all_split DKD_all_split Diabetes_all_split) 
