@@ -274,6 +274,7 @@ def eval_linear(args):
     dataset_val = build_dataset(args=args, is_train='val', img_dir=args.img_dir)
 
     # Apply subset sampling by absolute number if new_subset_num > 0
+    args.droplast = True  # default behavior
     if args.new_subset_num > 0:
         print(f'New subset method for absolute number {args.new_subset_num}')
         def create_separate_class_based_subsets(train_dataset, val_dataset, total_subset_num):
