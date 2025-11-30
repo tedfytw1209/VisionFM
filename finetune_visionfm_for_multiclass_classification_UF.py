@@ -256,9 +256,18 @@ def convert_to_one_hot(gts,num_classes):
 
 
 def eval_linear(args):
+    if args.bootstrap_runs:
+        project_name = "VisionFM_bootstrap"
+        group_name = f"{args.task}_bootstrap_group"
+        model_add_dir = "seed_" + str(args.seed)
+    else:
+        project_name = "VisionFM"
+        group_name = None
+        model_add_dir = ""
     wandb.init(
-        project="VisionFM",
+        project=project_name,
         name=args.task,
+        group=group_name,
         config=args,
         dir=os.path.join('wandb_log',args.task),
     )
@@ -461,8 +470,9 @@ def eval_linear(args):
             wandb.log(log_stats, step=epoch)
         
             if utils.is_main_process() and (test_stats["auc"] >= best_auc):
+                os.makedirs(os.path.join(args.output_dir, model_add_dir), exist_ok=True)
                 # always only save best checkpoint till now
-                with (Path(args.output_dir) / "log.txt").open("a") as f:
+                with (Path(args.output_dir) / model_add_dir / "log.txt").open("a") as f:
                     f.write(json.dumps(log_stats) + "\n")
                 save_dict = {
                     "epoch": epoch + 1,
@@ -472,9 +482,7 @@ def eval_linear(args):
                     "scheduler": scheduler.state_dict(),
                     "best_auc": test_stats["auc"],
                 }
-                torch.save(save_dict, os.path.join(args.output_dir, "checkpoint_best_finetune.pth"))
-                np.save(os.path.join(args.output_dir, 'best.npy'), output)
-                np.save(os.path.join(args.output_dir, 'target.npy'), target)
+                torch.save(save_dict, os.path.join(args.output_dir, model_add_dir, "checkpoint_best_finetune.pth"))
 
                 aupr_with_best_auc = test_stats['aupr']
 
@@ -615,7 +623,7 @@ if __name__ == '__main__':
     parser.add_argument("--dist_backend", default="nccl", type=str)
     parser.add_argument('--data_path', default='/path/to/dataset/', type=str,
         help='Please specify path to the eye image data.')
-    parser.add_argument('--seed', default=0, type=int)
+    parser.add_argument('--seed', default=42, type=int)
     parser.add_argument('--modality', default='Fundus', type=str)
     parser.add_argument('--task', default='PAPILA', type=str)
     parser.add_argument('--extra', default='', type=str)
@@ -626,9 +634,10 @@ if __name__ == '__main__':
     parser.add_argument('--load_from', default=None, help='Path to load checkpoints to resume finetuning')
     parser.add_argument('--img_dir', default='/orange/bianjiang/tienyu/OCT_AD/all_images/', type=str)
     parser.add_argument('--new_subset_num', default=0, type=int,
-                        help='Subset number for sampling dataset. If > 0, sample subset_num from train datasets with seed 42')
+                        help='Subset number for sampling dataset. If > 0, sample subset_num from train datasets')
     parser.add_argument('--droplast', action='store_true', default=False,
                         help='Drop the last incomplete batch, if the dataset size is not divisible by the batch size')
+    parser.add_argument('--bootstrap_runs', action='store_true', default=False, help="Doing bootstrap sampling for training dataset")
     args = parser.parse_args()
 
     if args.output_dir:
