@@ -360,6 +360,7 @@ def eval_linear(args):
 
     print(f"AUC: {auroc}, AUPR: {aupr}")
 
+    os.makedirs(os.path.join(args.output_dir, model_add_dir), exist_ok=True)
     np.save(os.path.join(args.output_dir, model_add_dir, 'best.npy'), output)
     np.save(os.path.join(args.output_dir, model_add_dir, 'target.npy'), target)
         
