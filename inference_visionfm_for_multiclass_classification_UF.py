@@ -257,8 +257,8 @@ def eval_linear(args):
         project_name = "VisionFM_bootstrap"
         args.task = args.task[:120]
         group_name = args.task
-        name = "seed_" + str(args.subsetseed)
-        model_add_dir = "seed_" + str(args.subsetseed)
+        name = "testseed_" + str(args.subsetseed)
+        model_add_dir = "testseed_" + str(args.subsetseed)
     else:
         project_name = "VisionFM"
         group_name = None
