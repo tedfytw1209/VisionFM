@@ -253,11 +253,23 @@ def convert_to_one_hot(gts,num_classes):
 
 
 def eval_linear(args):
+    if args.bootstrap_runs:
+        project_name = "VisionFM_bootstrap"
+        args.task = args.task[:120]
+        group_name = args.task
+        name = "seed_" + str(args.subsetseed)
+        model_add_dir = "seed_" + str(args.subsetseed)
+    else:
+        project_name = "VisionFM"
+        group_name = None
+        name = args.task
+        model_add_dir = ""
     wandb.init(
-        project="VisionFM",
-        name=args.task,
+        project=project_name,
+        name=name,
+        group=group_name,
         config=args,
-        dir=os.path.join('wandb_log',args.task),
+        dir=os.path.join('wandb_log',model_add_dir,args.task),
     )
     utils.init_distributed_mode(args)
     cudnn.benchmark = True
@@ -348,8 +360,8 @@ def eval_linear(args):
 
     print(f"AUC: {auroc}, AUPR: {aupr}")
 
-    np.save(os.path.join(args.output_dir, 'best.npy'), output)
-    np.save(os.path.join(args.output_dir, 'target.npy'), target)
+    np.save(os.path.join(args.output_dir, model_add_dir, 'best.npy'), output)
+    np.save(os.path.join(args.output_dir, model_add_dir, 'target.npy'), target)
         
     wandb_dict={f'test_{k}': v for k, v in test_stats.items()}
     wandb.log(wandb_dict)
@@ -443,7 +455,9 @@ if __name__ == '__main__':
     parser.add_argument('--load_from', default=None, help='Path to load checkpoints to resume finetuning')
     parser.add_argument('--img_dir', default='/orange/bianjiang/tienyu/OCT_AD/all_images/', type=str)
     parser.add_argument('--new_subset_num', default=0, type=int,
-                        help='Subset number for sampling dataset. If > 0, sample subset_num from train datasets with seed 42')
+                        help='Subset number for sampling dataset. If > 0, sample subset_num from train datasets (default 42)')
+    parser.add_argument('--subsetseed', default=42, type=int)
+    parser.add_argument('--bootstrap_runs', action='store_true', default=False, help="Doing bootstrap sampling for training dataset")
     args = parser.parse_args()
 
     if args.output_dir:

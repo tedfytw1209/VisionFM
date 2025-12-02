@@ -258,18 +258,21 @@ def convert_to_one_hot(gts,num_classes):
 def eval_linear(args):
     if args.bootstrap_runs:
         project_name = "VisionFM_bootstrap"
-        group_name = f"{args.task}_bootstrap_group"
-        model_add_dir = "seed_" + str(args.seed)
+        args.task = args.task[:120]
+        group_name = args.task
+        name = "seed_" + str(args.subsetseed)
+        model_add_dir = "seed_" + str(args.subsetseed)
     else:
         project_name = "VisionFM"
         group_name = None
+        name = args.task
         model_add_dir = ""
     wandb.init(
         project=project_name,
-        name=args.task,
+        name=name,
         group=group_name,
         config=args,
-        dir=os.path.join('wandb_log',args.task),
+        dir=os.path.join('wandb_log',model_add_dir,args.task),
     )
     utils.init_distributed_mode(args)
     cudnn.benchmark = True
@@ -304,7 +307,7 @@ def eval_linear(args):
                 print(f'{split_name} target subset size: {target_size}')
                 
                 # Separate samples by class and permute
-                rng = np.random.RandomState(42)
+                rng = np.random.RandomState(args.subsetseed)
                 selected_indices = []
                 
                 for class_idx in unique_classes:
@@ -623,7 +626,7 @@ if __name__ == '__main__':
     parser.add_argument("--dist_backend", default="nccl", type=str)
     parser.add_argument('--data_path', default='/path/to/dataset/', type=str,
         help='Please specify path to the eye image data.')
-    parser.add_argument('--seed', default=42, type=int)
+    parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--modality', default='Fundus', type=str)
     parser.add_argument('--task', default='PAPILA', type=str)
     parser.add_argument('--extra', default='', type=str)
@@ -637,6 +640,7 @@ if __name__ == '__main__':
                         help='Subset number for sampling dataset. If > 0, sample subset_num from train datasets')
     parser.add_argument('--droplast', action='store_true', default=False,
                         help='Drop the last incomplete batch, if the dataset size is not divisible by the batch size')
+    parser.add_argument('--subsetseed', default=42, type=int)
     parser.add_argument('--bootstrap_runs', action='store_true', default=False, help="Doing bootstrap sampling for training dataset")
     args = parser.parse_args()
 
