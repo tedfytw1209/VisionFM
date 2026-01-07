@@ -36,7 +36,6 @@ for i in "${!SUBSET_SEEDS[@]}"
 do
     # Create a job name based on the variables
     SUBSETSEED="${SUBSET_SEEDS[$i]}"
-    echo "Running dataset: $DATASET with seed $SUBSETSEED"
     # Submit the job to Slurm
     echo "bash $SCRIPT $DATASET $LR $NUM_CLASS $Modality $SUBSETNUM $SUBSETSEED"
     bash $SCRIPT $DATASET $LR $NUM_CLASS $Modality $SUBSETNUM $SUBSETSEED
