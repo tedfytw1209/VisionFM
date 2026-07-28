@@ -20,7 +20,7 @@ CSV_ROOT=${5:-"/blue/ruogu.fang/tienyuchang/OphFoundation/Public_OCT_split/"}
 
 module purge
 module load conda
-conda activate vfm310
+conda activate vfm
 
 echo $SLURM_JOBID
 

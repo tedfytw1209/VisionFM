@@ -18,7 +18,7 @@ DATA_ROOT=${3:-"/orange/ruogu.fang/tienyuchang/OCTRFF_Data/benchmark/"}
 
 module purge
 module load conda
-conda activate vfm310
+conda activate vfm
 
 echo $SLURM_JOBID
 
