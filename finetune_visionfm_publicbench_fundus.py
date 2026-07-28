@@ -16,6 +16,7 @@ import argparse
 import numpy as np
 import torch
 import torch.backends.cudnn as cudnn
+import wandb
 from pathlib import Path
 from torch import nn
 from torchvision import datasets
@@ -76,14 +77,16 @@ def compute_metrics(preds, targets, output_labels, num_labels):
     return {
         'auc': roc_auc_score(target_one_hot, output, average='macro', multi_class='ovr'),
         'aupr': average_precision_score(target_one_hot, output, average='macro'),
+        'mcc': matthews_corrcoef(target_1d, output_labels_1d),
         'accuracy': accuracy_score(target_1d, output_labels_1d),
         'hamming': hamming_loss(target_one_hot, output_one_hot),
         'jaccard': jaccard_score(target_one_hot, output_one_hot, average='macro'),
+        'average_precision': average_precision_score(target_one_hot, output_one_hot, average='macro'),
         'kappa': cohen_kappa_score(target_1d, output_labels_1d),
         'f1': f1_score(target_one_hot, output_one_hot, zero_division=0, average='macro'),
+        'roc_auc': roc_auc_score(target_one_hot, output_one_hot, multi_class='ovr', average='macro'),
         'precision': precision_score(target_one_hot, output_one_hot, zero_division=0, average='macro'),
         'recall': recall_score(target_one_hot, output_one_hot, zero_division=0, average='macro'),
-        'mcc': matthews_corrcoef(target_1d, output_labels_1d),
     }
 
 
@@ -161,6 +164,12 @@ def validate_network(val_loader, model, linear_classifier, n, avgpool):
 
 
 def eval_linear(args):
+    wandb.init(
+        project="VisionFM",
+        name=args.task,
+        config=args,
+        dir=os.path.join('wandb_log', args.task),
+    )
     utils.init_distributed_mode(args)
     cudnn.benchmark = True
     utils.fix_random_seeds(args.seed)
@@ -202,7 +211,8 @@ def eval_linear(args):
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=0)
 
     best_auc = 0.
-    aupr_with_best_auc = 0.
+    best_val_stats = {'auc': 0., 'aupr': 0., 'accuracy': 0., 'f1': 0.,
+                       'precision': 0., 'recall': 0., 'kappa': 0., 'mcc': 0.}
     os.makedirs(args.output_dir, exist_ok=True)
     for epoch in range(args.epochs):
         model.train()
@@ -211,6 +221,7 @@ def eval_linear(args):
         scheduler.step()
 
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()}, 'epoch': epoch}
+        wandb.log(log_stats, step=epoch)
 
         if epoch % args.val_freq == 0 or epoch == args.epochs - 1:
             model.eval()
@@ -220,6 +231,7 @@ def eval_linear(args):
             val_stats.update(compute_metrics(preds, targets, output_labels, args.num_labels))
 
             log_stats = {**log_stats, **{f'val_{k}': v for k, v in val_stats.items()}}
+            wandb.log(log_stats, step=epoch)
 
             if val_stats['auc'] >= best_auc:
                 with (Path(args.output_dir) / 'log.txt').open('a') as f:
@@ -234,13 +246,22 @@ def eval_linear(args):
                     'class_to_idx': dataset_train.class_to_idx,
                 }
                 torch.save(save_dict, os.path.join(args.output_dir, 'checkpoint_best_finetune.pth'))
-                aupr_with_best_auc = val_stats['aupr']
+                best_val_stats = val_stats
 
             best_auc = max(best_auc, val_stats['auc'])
-            print(f'Best val auc so far: {best_auc:.4f}; accompanying aupr: {aupr_with_best_auc:.4f}')
+            print(f"Best val so far -- acc: {best_val_stats['accuracy']:.4f} f1: {best_val_stats['f1']:.4f} "
+                  f"auc: {best_val_stats['auc']:.4f} pr: {best_val_stats['aupr']:.4f} "
+                  f"precision: {best_val_stats['precision']:.4f} recall: {best_val_stats['recall']:.4f} "
+                  f"kappa: {best_val_stats['kappa']:.4f} mcc: {best_val_stats['mcc']:.4f}")
 
+    wandb.log({f'best_val_{k}': v for k, v in best_val_stats.items()})
+    wandb.finish()
     print("Finetuning of VisionFM completed\n"
-          "Best val auc: {acc:.4f}; accompanying aupr: {aupr:.4f}".format(acc=best_auc, aupr=aupr_with_best_auc))
+          "Best val -- acc: {acc:.4f} f1: {f1:.4f} auc: {auc:.4f} pr: {pr:.4f} "
+          "precision: {prec:.4f} recall: {rec:.4f} kappa: {kappa:.4f} mcc: {mcc:.4f}".format(
+              acc=best_val_stats['accuracy'], f1=best_val_stats['f1'], auc=best_val_stats['auc'],
+              pr=best_val_stats['aupr'], prec=best_val_stats['precision'], rec=best_val_stats['recall'],
+              kappa=best_val_stats['kappa'], mcc=best_val_stats['mcc']))
 
 
 if __name__ == '__main__':
