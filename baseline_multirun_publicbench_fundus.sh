@@ -16,6 +16,9 @@ SCRIPT=${1:-"finetune_visionfm_publicbench_fundus.sh"}
 LR=${2:-"1e-3"}
 DATA_ROOT=${3:-"/orange/ruogu.fang/tienyuchang/OCTRFF_Data/benchmark/"}
 
+module load conda
+conda activate vfm
+
 echo $SLURM_JOBID
 
 # Same 7 public fundus-photo datasets as MIRAGE's run_fundus_all_tasks_l4.sh

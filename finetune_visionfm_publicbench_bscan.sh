@@ -14,7 +14,7 @@ date;hostname;pwd
 
 module purge
 module load conda
-conda activate vfm310
+conda activate vfm
 
 # Single public OCT B-scan benchmark dataset + fold: finetune VisionFM (OCT
 #   encoder) then evaluate. inference_visionfm_publicbench_bscan.py reports
