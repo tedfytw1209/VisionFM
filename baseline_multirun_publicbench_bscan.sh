@@ -18,8 +18,9 @@ LR=${3:-"1e-3"}
 DATA_ROOT=${4:-"/orange/ruogu.fang/tienyuchang/OCTCubeM/assets/ext_oph_datasets/"}
 CSV_ROOT=${5:-"/blue/ruogu.fang/tienyuchang/OphFoundation/Public_OCT_split/"}
 
+module purge
 module load conda
-conda activate vfm
+conda activate vfm310
 
 echo $SLURM_JOBID
 

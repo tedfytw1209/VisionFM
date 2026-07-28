@@ -14,7 +14,7 @@ date;hostname;pwd
 
 module purge
 module load conda
-conda activate vfm
+conda activate vfm310
 
 # Single public fundus-photo benchmark dataset: finetune VisionFM (Fundus
 #   encoder) then evaluate on the held-out test split, using

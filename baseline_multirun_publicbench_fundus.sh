@@ -16,8 +16,9 @@ SCRIPT=${1:-"finetune_visionfm_publicbench_fundus.sh"}
 LR=${2:-"1e-3"}
 DATA_ROOT=${3:-"/orange/ruogu.fang/tienyuchang/OCTRFF_Data/benchmark/"}
 
+module purge
 module load conda
-conda activate vfm
+conda activate vfm310
 
 echo $SLURM_JOBID
 
