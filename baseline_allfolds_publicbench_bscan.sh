@@ -18,7 +18,7 @@ date;hostname;pwd
 #   point estimate -- mirrors MIRAGE's run_bscan_all_tasks_l4.sh.
 DATASET=$1          # duke14, glaucoma, oimhs, umn
 LR=${2:-"1e-3"}
-DATA_ROOT=${3:-"/orange/ruogu.fang/tienyuchang/OCTCubeM/assets/ext_oph_datasets/"}
+DATA_ROOT=${3:-"/blue/ruogu.fang/tienyuchang/OCTCubeM/assets/ext_oph_datasets/"}
 CSV_ROOT=${4:-"/blue/ruogu.fang/tienyuchang/OphFoundation/Public_OCT_split/"}
 SCRIPT=${5:-"finetune_visionfm_publicbench_bscan.sh"}
 

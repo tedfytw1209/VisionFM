@@ -26,7 +26,7 @@ conda activate vfm
 DATASET=$1          # duke14, glaucoma, oimhs, umn
 FOLD=${2:-0}        # 0-9
 LR=${3:-"1e-3"}
-DATA_ROOT=${4:-"/orange/ruogu.fang/tienyuchang/OCTCubeM/assets/ext_oph_datasets/"}
+DATA_ROOT=${4:-"/blue/ruogu.fang/tienyuchang/OCTCubeM/assets/ext_oph_datasets/"}
 CSV_ROOT=${5:-"/blue/ruogu.fang/tienyuchang/OphFoundation/Public_OCT_split/"}
 
 MODEL="vit_base"

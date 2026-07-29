@@ -14,7 +14,7 @@ date;hostname;pwd
 
 SCRIPT=${1:-"baseline_allfolds_publicbench_bscan.sh"}
 LR=${2:-"1e-3"}
-DATA_ROOT=${3:-"/orange/ruogu.fang/tienyuchang/OCTCubeM/assets/ext_oph_datasets/"}
+DATA_ROOT=${3:-"/blue/ruogu.fang/tienyuchang/OCTCubeM/assets/ext_oph_datasets/"}
 CSV_ROOT=${4:-"/blue/ruogu.fang/tienyuchang/OphFoundation/Public_OCT_split/"}
 
 echo $SLURM_JOBID

@@ -9,9 +9,13 @@
 #
 # - duke14: columns folder, imgname (fallback oct_imgname), slice_indices,
 #   label, split. imgname is a '%'-style template, e.g. 'AMD_1_%02d' -- only
-#   the literal prefix before '%' is used. The on-disk slice number is offset
-#   by 0 or 1 relative to the CSV's slice index (varies per volume/export
-#   run) and zero-padded to 3, 2, or 0 digits, saved as '<prefix><n>.png'.
+#   the literal prefix before '%' is used. Per OCTCubeM's own
+#   extract_duke14_data.ipynb, each on-disk slice file keeps its *original*
+#   TIFF number (e.g. 'AMD_1_072.png'), not a renumbered 0..N-1 index, and
+#   that raw numbering doesn't reliably start at 0 or 1 per volume -- so the
+#   CSV's slice_indices values can't be matched as literal on-disk numbers.
+#   Instead, slice_indices is treated as this volume's ordinal position,
+#   resolved against a sorted directory listing of '<prefix>*.png'.
 # - umn / oimhs: columns folder, imgname, slice_indices, slice_num, label,
 #   split. imgname already contains a '%d'-style placeholder Python's '%'
 #   operator can format directly; same 0/1 slice-index offset applies.
@@ -80,20 +84,18 @@ def _resolve_duke14_path(root_dir: Path, row) -> Path:
     if prefix and not prefix.endswith('_'):
         prefix += '_'
 
-    def candidates(slice_index: int):
-        return [
-            base_dir / f'{prefix}{slice_index:03d}{IMAGE_EXTENSION}',
-            base_dir / f'{prefix}{slice_index:02d}{IMAGE_EXTENSION}',
-            base_dir / f'{prefix}{slice_index}{IMAGE_EXTENSION}',
-        ]
-
     slice_list = _parse_slice_indices(row)
-    middle = _middle_slice(slice_list)
-    offset = _choose_offset(candidates, slice_list)
-    for path in candidates(middle + offset):
-        if path.exists():
-            return path
-    _raise_not_found(base_dir, [str(p) for p in candidates(middle + offset)])
+    position = len(slice_list) // 2
+
+    def slice_number(path: Path) -> int:
+        return int(path.stem[len(prefix):])
+
+    matches = sorted(base_dir.glob(f'{prefix}*{IMAGE_EXTENSION}'), key=slice_number)
+    if position < len(matches):
+        return matches[position]
+    _raise_not_found(base_dir, [
+        f"<position {position} of {len(matches)} files matching '{prefix}*{IMAGE_EXTENSION}' in {base_dir}>"
+    ])
 
 
 def _resolve_template_path(root_dir: Path, row) -> Path:
