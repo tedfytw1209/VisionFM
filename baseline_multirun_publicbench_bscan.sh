@@ -26,7 +26,8 @@ echo $SLURM_JOBID
 #   job per dataset (SCRIPT defaults to baseline_allfolds_publicbench_bscan.sh),
 #   which in turn sweeps all 10 folds (0-9) for that dataset within its own
 #   job allocation.
-DATASETS=(duke14 glaucoma oimhs umn)
+#DATASETS=(duke14 glaucoma oimhs umn)
+DATASETS=(duke14 oimhs umn)
 
 #sbatch baseline_multirun_publicbench_bscan.sh baseline_allfolds_publicbench_bscan.sh 1e-3
 for DATASET in "${DATASETS[@]}"
