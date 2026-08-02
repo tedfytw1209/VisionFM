@@ -32,6 +32,30 @@ class PublicbenchFundusProtocolTests(unittest.TestCase):
                 'test': ['dr/b.jpg'],
             })
 
+    def test_matching_maps_and_disjoint_paths_are_allowed(self):
+        train_map = {'healthy': 0, 'dr': 1}
+
+        validate_split_class_maps(train_map, {
+            'val': {'healthy': 0, 'dr': 1},
+            'test': {'healthy': 0, 'dr': 1},
+        })
+        validate_disjoint_relative_paths({
+            'train': ['healthy/a.jpg'],
+            'val': ['healthy/b.jpg'],
+            'test': ['dr/c.jpg'],
+        })
+
+    def test_retfound_fallback_score_requires_kappa(self):
+        with self.assertRaisesRegex(KeyError, 'kappa'):
+            retfound_fallback_score({'f1': 0.6, 'auc': 0.9})
+
+    def test_checkpoint_mapping_must_match_test_mapping(self):
+        with self.assertRaisesRegex(ValueError, 'test class_to_idx'):
+            validate_split_class_maps(
+                {'healthy': 0, 'dr': 1},
+                {'test': {'healthy': 0}},
+            )
+
     def test_imagefolder_splits_reject_duplicate_relative_filename(self):
         class Dataset:
             def __init__(self, root, samples):

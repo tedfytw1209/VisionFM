@@ -168,7 +168,7 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size_per_gpu', default=64, type=int, help='Per-GPU batch-size')
     parser.add_argument('--local_rank', default=0, type=int, help='Please ignore and do not set this argument.')
     parser.add_argument('--data_path', type=str, required=True,
-        help='Root folder for one public benchmark dataset, containing a test/Class_x subfolder.')
+        help='Root folder for one public benchmark dataset, containing train/val/test/Class_x subfolders.')
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--modality', default='Fundus', type=str)
     parser.add_argument('--task', default='PAPILA', type=str)
