@@ -31,7 +31,7 @@ Ties retain the first checkpoint, matching RETFound's strict `max_score < val_sc
 - `finetune_visionfm_publicbench_fundus.py` will own split construction, split validation, probability-based metric calculation, RETFound-compatible score selection, and in-process final test reporting.
 - `inference_visionfm_publicbench_fundus.py` will reuse the same split-validation and metric behavior for standalone checkpoint evaluation.
 - `finetune_visionfm_publicbench_fundus.sh` will invoke only fine-tuning, because that command produces the final held-out test result itself.
-- A small dependency-free protocol helper module and unit tests will make split validation and score calculation testable without CUDA, pretrained weights, or benchmark data.
+- A small protocol helper module, using only existing project dependencies, and unit tests will make split validation and score calculation testable without CUDA, pretrained weights, or benchmark data.
 
 ## Error handling
 

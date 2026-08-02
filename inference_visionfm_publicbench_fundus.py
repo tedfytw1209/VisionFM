@@ -1,11 +1,10 @@
 # Evaluating a VisionFM checkpoint (from finetune_visionfm_publicbench_fundus.py)
 # on the held-out test split of a public fundus-photo benchmark dataset.
 #
-# Data loading mirrors MIRAGE's run_cls_tuning_fundus.py (already verified
-# working against these datasets on the Linux server): ImageFolder-based,
-# num_classes auto-inferred from the test split's subfolders -- not the
-# hardcoded per-dataset class-folder-name list used by RETFoundDataset in
-# inference_visionfm_for_multiclass_classification_UF.py.
+# Data loading is ImageFolder-based. The checkpoint's training class mapping
+# must match all train/val/test folder mappings before the held-out test split
+# is evaluated, avoiding the hardcoded class-folder-name list used by
+# RETFoundDataset in inference_visionfm_for_multiclass_classification_UF.py.
 
 import os
 import json
@@ -22,11 +21,10 @@ from torchvision import transforms as pth_transforms
 import utils
 import models
 from models.head import ClsHead
-
-from sklearn.metrics import (
-    accuracy_score, roc_auc_score, f1_score, average_precision_score,
-    hamming_loss, jaccard_score, recall_score, precision_score,
-    cohen_kappa_score, matthews_corrcoef,
+from publicbench_fundus_protocol import (
+    compute_classification_metrics,
+    validate_imagefolder_splits,
+    validate_split_class_maps,
 )
 
 
@@ -40,18 +38,11 @@ def build_transform(args):
     ])
 
 
-def build_dataset(args):
-    root = os.path.join(args.data_path, 'test')
+def build_dataset(subset, args):
+    root = os.path.join(args.data_path, subset)
     dataset = datasets.ImageFolder(root, transform=build_transform(args))
-    print(f'test class_to_idx: {dataset.class_to_idx}')
+    print(f'{subset} class_to_idx: {dataset.class_to_idx}')
     return dataset
-
-
-def convert_to_one_hot(gts, num_classes):
-    gts_one_hot = np.zeros((gts.shape[0], num_classes))
-    for i in range(len(gts)):
-        gts_one_hot[i][gts[i][0]] = 1
-    return gts_one_hot
 
 
 @torch.no_grad()
@@ -98,9 +89,21 @@ def eval_linear(args):
 
     print(f"-------- Current Task: {args.task} Modality: {args.modality} -------")
 
-    dataset_test = build_dataset(args)
-    args.num_labels = len(dataset_test.classes)
-    print(f'Auto-detected {args.num_labels} classes: {dataset_test.classes}')
+    checkpoint = torch.load(args.pretrained_weights, map_location='cpu')
+    checkpoint_class_to_idx = checkpoint.get('class_to_idx')
+    if checkpoint_class_to_idx is None:
+        raise ValueError(
+            'checkpoint does not contain class_to_idx; use a checkpoint saved by '
+            'the public-benchmark fine-tuning runner'
+        )
+
+    dataset_train = build_dataset('train', args)
+    dataset_val = build_dataset('val', args)
+    dataset_test = build_dataset('test', args)
+    validate_imagefolder_splits(dataset_train, {'val': dataset_val, 'test': dataset_test})
+    validate_split_class_maps(checkpoint_class_to_idx, {'train': dataset_train.class_to_idx})
+    args.num_labels = len(checkpoint_class_to_idx)
+    print(f'Checkpoint class mapping: {checkpoint_class_to_idx}')
 
     test_loader = torch.utils.data.DataLoader(
         dataset_test, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers,
@@ -119,8 +122,7 @@ def eval_linear(args):
     linear_classifier = ClsHead(embed_dim=embed_dim * 4, num_classes=args.num_labels, layers=3)
     linear_classifier = linear_classifier.cuda()
 
-    state_dict = torch.load(args.pretrained_weights, map_location='cpu')
-    classifier_state_dict = state_dict.get('classifier_state_dict', None)
+    classifier_state_dict = checkpoint.get('classifier_state_dict', None)
     if classifier_state_dict is None:
         print("Cannot find the weights for classifier (decoder). Please refer to our fine-tuning instruction!!")
         print("The classifier would utlize the random weights!!")
@@ -130,31 +132,14 @@ def eval_linear(args):
 
     model.eval()
     linear_classifier.eval()
-    test_stats, preds, targets, output_labels = validate_network(
+    test_stats, preds, targets, _ = validate_network(
         test_loader, model, linear_classifier, args.n_last_blocks, args.avgpool_patchtokens)
 
     output = np.vstack(preds)
-    output_labels = np.concatenate(output_labels, axis=0)
     target = np.vstack(targets)
-    output_one_hot = convert_to_one_hot(output_labels, num_classes=args.num_labels)
-    target_one_hot = convert_to_one_hot(target, num_classes=args.num_labels)
-    target_1d = target.flatten()
-    output_labels_1d = output_labels.flatten()
+    test_stats.update(compute_classification_metrics(output, target, args.num_labels))
 
-    auroc = roc_auc_score(target_one_hot, output, average='macro', multi_class='ovr')
-    test_stats['auc'] = auroc
-    aupr = average_precision_score(target_one_hot, output, average='macro')
-    test_stats['aupr'] = aupr
-    test_stats['accuracy'] = accuracy_score(target_1d, output_labels_1d)
-    test_stats['hamming'] = hamming_loss(target_one_hot, output_one_hot)
-    test_stats['jaccard'] = jaccard_score(target_one_hot, output_one_hot, average='macro')
-    test_stats['kappa'] = cohen_kappa_score(target_1d, output_labels_1d)
-    test_stats['f1'] = f1_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
-    test_stats['precision'] = precision_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
-    test_stats['recall'] = recall_score(target_one_hot, output_one_hot, zero_division=0, average='macro')
-    test_stats['mcc'] = matthews_corrcoef(target_1d, output_labels_1d)
-
-    print(f"AUC: {auroc}, AUPR: {aupr}")
+    print(f"AUC: {test_stats['auc']}, AUPR: {test_stats['aupr']}")
 
     os.makedirs(args.output_dir, exist_ok=True)
     np.save(os.path.join(args.output_dir, 'best.npy'), output)

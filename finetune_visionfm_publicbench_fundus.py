@@ -25,11 +25,10 @@ from torchvision import transforms as pth_transforms
 import utils
 import models
 from models.head import ClsHead
-
-from sklearn.metrics import (
-    accuracy_score, roc_auc_score, f1_score, average_precision_score,
-    hamming_loss, jaccard_score, recall_score, precision_score,
-    cohen_kappa_score, matthews_corrcoef,
+from publicbench_fundus_protocol import (
+    compute_classification_metrics,
+    retfound_fallback_score,
+    validate_imagefolder_splits,
 )
 
 
@@ -58,36 +57,10 @@ def build_dataset(subset, args):
     return dataset
 
 
-def convert_to_one_hot(gts, num_classes):
-    gts_one_hot = np.zeros((gts.shape[0], num_classes))
-    for i in range(len(gts)):
-        gts_one_hot[i][gts[i][0]] = 1
-    return gts_one_hot
-
-
-def compute_metrics(preds, targets, output_labels, num_labels):
+def compute_metrics(preds, targets, num_labels):
     output = np.vstack(preds)
-    output_labels = np.concatenate(output_labels, axis=0)
     target = np.vstack(targets)
-    output_one_hot = convert_to_one_hot(output_labels, num_classes=num_labels)
-    target_one_hot = convert_to_one_hot(target, num_classes=num_labels)
-    target_1d = target.flatten()
-    output_labels_1d = output_labels.flatten()
-
-    return {
-        'auc': roc_auc_score(target_one_hot, output, average='macro', multi_class='ovr'),
-        'aupr': average_precision_score(target_one_hot, output, average='macro'),
-        'mcc': matthews_corrcoef(target_1d, output_labels_1d),
-        'accuracy': accuracy_score(target_1d, output_labels_1d),
-        'hamming': hamming_loss(target_one_hot, output_one_hot),
-        'jaccard': jaccard_score(target_one_hot, output_one_hot, average='macro'),
-        'average_precision': average_precision_score(target_one_hot, output_one_hot, average='macro'),
-        'kappa': cohen_kappa_score(target_1d, output_labels_1d),
-        'f1': f1_score(target_one_hot, output_one_hot, zero_division=0, average='macro'),
-        'roc_auc': roc_auc_score(target_one_hot, output_one_hot, multi_class='ovr', average='macro'),
-        'precision': precision_score(target_one_hot, output_one_hot, zero_division=0, average='macro'),
-        'recall': recall_score(target_one_hot, output_one_hot, zero_division=0, average='macro'),
-    }
+    return compute_classification_metrics(output, target, num_labels)
 
 
 def train(model, linear_classifier, optimizer, loader, epoch, n, avgpool):
@@ -127,11 +100,11 @@ def train(model, linear_classifier, optimizer, loader, epoch, n, avgpool):
 
 
 @torch.no_grad()
-def validate_network(val_loader, model, linear_classifier, n, avgpool):
+def validate_network(val_loader, model, linear_classifier, n, avgpool, split_name='Val'):
     model.eval()
     linear_classifier.eval()
     metric_logger = utils.MetricLogger(delimiter="  ")
-    header = 'Val:'
+    header = f'{split_name}:'
     targets, preds, output_labels = [], [], []
     for inp, target in metric_logger.log_every(val_loader, 20, header):
         inp = inp.cuda(non_blocking=True)
@@ -159,7 +132,7 @@ def validate_network(val_loader, model, linear_classifier, n, avgpool):
 
         metric_logger.update(loss=loss.item())
 
-    print('* val loss {losses.global_avg:.4f} '.format(losses=metric_logger.loss))
+    print(f'* {split_name.lower()} loss {{losses.global_avg:.4f}} '.format(losses=metric_logger.loss))
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}, preds, targets, output_labels
 
 
@@ -180,6 +153,8 @@ def eval_linear(args):
     args.num_labels = len(dataset_train.classes)
     print(f'Auto-detected {args.num_labels} classes: {dataset_train.classes}')
     dataset_val = build_dataset('val', args)
+    dataset_test = build_dataset('test', args)
+    validate_imagefolder_splits(dataset_train, {'val': dataset_val, 'test': dataset_test})
 
     train_loader = torch.utils.data.DataLoader(
         dataset_train, shuffle=True, batch_size=args.batch_size_per_gpu,
@@ -187,9 +162,16 @@ def eval_linear(args):
     )
     val_loader = torch.utils.data.DataLoader(
         dataset_val, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers,
-        pin_memory=True, shuffle=True,
+        pin_memory=True, shuffle=False,
     )
-    print(f"Data loaded with {len(dataset_train)} train and {len(dataset_val)} val imgs.")
+    test_loader = torch.utils.data.DataLoader(
+        dataset_test, batch_size=args.batch_size_per_gpu, num_workers=args.num_workers,
+        pin_memory=True, shuffle=False,
+    )
+    print(
+        f"Data loaded with {len(dataset_train)} train, {len(dataset_val)} val, "
+        f"and {len(dataset_test)} held-out test imgs."
+    )
 
     model = models.__dict__[args.arch](
         img_size=[args.input_size], patch_size=args.patch_size, num_classes=0,
@@ -210,7 +192,7 @@ def eval_linear(args):
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epochs, eta_min=0)
 
-    best_auc = 0.
+    best_score = float('-inf')
     best_val_stats = {'auc': 0., 'aupr': 0., 'accuracy': 0., 'f1': 0.,
                        'precision': 0., 'recall': 0., 'kappa': 0., 'mcc': 0.}
     os.makedirs(args.output_dir, exist_ok=True)
@@ -226,14 +208,16 @@ def eval_linear(args):
         if epoch % args.val_freq == 0 or epoch == args.epochs - 1:
             model.eval()
             linear_classifier.eval()
-            val_stats, preds, targets, output_labels = validate_network(
+            val_stats, preds, targets, _ = validate_network(
                 val_loader, model, linear_classifier, args.n_last_blocks, args.avgpool_patchtokens)
-            val_stats.update(compute_metrics(preds, targets, output_labels, args.num_labels))
+            val_stats.update(compute_metrics(preds, targets, args.num_labels))
+            val_score = retfound_fallback_score(val_stats)
+            val_stats['selection_score'] = val_score
 
             log_stats = {**log_stats, **{f'val_{k}': v for k, v in val_stats.items()}}
             wandb.log(log_stats, step=epoch)
 
-            if val_stats['auc'] >= best_auc:
+            if val_score > best_score:
                 with (Path(args.output_dir) / 'log.txt').open('a') as f:
                     f.write(json.dumps(log_stats) + '\n')
                 save_dict = {
@@ -242,19 +226,38 @@ def eval_linear(args):
                     'visionfm_state_dict': model.state_dict(),
                     'optimizer': optimizer.state_dict(),
                     'scheduler': scheduler.state_dict(),
-                    'best_auc': val_stats['auc'],
+                    'best_score': val_score,
+                    'selection_metric': 'retfound_fallback_f1_auc_kappa',
                     'class_to_idx': dataset_train.class_to_idx,
                 }
                 torch.save(save_dict, os.path.join(args.output_dir, 'checkpoint_best_finetune.pth'))
                 best_val_stats = val_stats
 
-            best_auc = max(best_auc, val_stats['auc'])
+            best_score = max(best_score, val_score)
             print(f"Best val so far -- acc: {best_val_stats['accuracy']:.4f} f1: {best_val_stats['f1']:.4f} "
                   f"auc: {best_val_stats['auc']:.4f} pr: {best_val_stats['aupr']:.4f} "
                   f"precision: {best_val_stats['precision']:.4f} recall: {best_val_stats['recall']:.4f} "
-                  f"kappa: {best_val_stats['kappa']:.4f} mcc: {best_val_stats['mcc']:.4f}")
+                  f"kappa: {best_val_stats['kappa']:.4f} mcc: {best_val_stats['mcc']:.4f} "
+                  f"score: {best_score:.4f}")
 
     wandb.log({f'best_val_{k}': v for k, v in best_val_stats.items()})
+    checkpoint_path = os.path.join(args.output_dir, 'checkpoint_best_finetune.pth')
+    checkpoint = torch.load(checkpoint_path, map_location='cpu')
+    model.load_state_dict(checkpoint['visionfm_state_dict'])
+    linear_classifier.load_state_dict(checkpoint['classifier_state_dict'])
+    test_stats, test_preds, test_targets, _ = validate_network(
+        test_loader, model, linear_classifier, args.n_last_blocks,
+        args.avgpool_patchtokens, split_name='Test'
+    )
+    test_stats.update(compute_metrics(test_preds, test_targets, args.num_labels))
+    test_stats['retfound_composite_score'] = retfound_fallback_score(test_stats)
+    test_probabilities = np.vstack(test_preds)
+    test_target_array = np.vstack(test_targets)
+    np.save(os.path.join(args.output_dir, 'test_probabilities.npy'), test_probabilities)
+    np.save(os.path.join(args.output_dir, 'test_targets.npy'), test_target_array)
+    with open(os.path.join(args.output_dir, 'test_stats.json'), 'w') as f:
+        json.dump({k: float(v) for k, v in test_stats.items()}, f, indent=2)
+    wandb.log({f'test_{k}': v for k, v in test_stats.items()})
     wandb.finish()
     print("Finetuning of VisionFM completed\n"
           "Best val -- acc: {acc:.4f} f1: {f1:.4f} auc: {auc:.4f} pr: {pr:.4f} "
@@ -262,6 +265,12 @@ def eval_linear(args):
               acc=best_val_stats['accuracy'], f1=best_val_stats['f1'], auc=best_val_stats['auc'],
               pr=best_val_stats['aupr'], prec=best_val_stats['precision'], rec=best_val_stats['recall'],
               kappa=best_val_stats['kappa'], mcc=best_val_stats['mcc']))
+    print("Held-out test -- acc: {acc:.4f} f1: {f1:.4f} auc: {auc:.4f} pr: {pr:.4f} "
+          "precision: {prec:.4f} recall: {rec:.4f} kappa: {kappa:.4f} mcc: {mcc:.4f} "
+          "score: {score:.4f}".format(
+              acc=test_stats['accuracy'], f1=test_stats['f1'], auc=test_stats['auc'],
+              pr=test_stats['aupr'], prec=test_stats['precision'], rec=test_stats['recall'],
+              kappa=test_stats['kappa'], mcc=test_stats['mcc'], score=test_stats['retfound_composite_score']))
 
 
 if __name__ == '__main__':
