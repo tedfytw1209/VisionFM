@@ -28,7 +28,8 @@ echo $SLURM_JOBID
 #   comparison requested for Fig 6a. Expected class counts, for a sanity
 #   check against the "Auto-detected N classes" line each run logs:
 #   Glaucoma_fundus:3 IDRiD_data:5 JSIEC:39 MESSIDOR2:5 PAPILA:3 Retina:4 APTOS2019:5
-DATASETS=(Glaucoma_fundus IDRiD_data JSIEC MESSIDOR2 PAPILA Retina APTOS2019)
+#DATASETS=(Glaucoma_fundus IDRiD_data JSIEC MESSIDOR2 PAPILA Retina APTOS2019)
+DATASETS=(IDRiD_data)
 
 #sbatch baseline_multirun_publicbench_fundus.sh finetune_visionfm_publicbench_fundus.sh 1e-3
 for DATASET in "${DATASETS[@]}"

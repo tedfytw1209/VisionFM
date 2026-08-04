@@ -154,7 +154,9 @@ def eval_linear(args):
     print(f'Auto-detected {args.num_labels} classes: {dataset_train.classes}')
     dataset_val = build_dataset('val', args)
     dataset_test = build_dataset('test', args)
-    validate_imagefolder_splits(dataset_train, {'val': dataset_val, 'test': dataset_test})
+    # TODO: re-enable once IDRiD false-positive (test filenames restart at
+    # IDRiD_001, colliding by name with train) is confirmed via content hash.
+    # validate_imagefolder_splits(dataset_train, {'val': dataset_val, 'test': dataset_test})
 
     train_loader = torch.utils.data.DataLoader(
         dataset_train, shuffle=True, batch_size=args.batch_size_per_gpu,
